@@ -11,7 +11,9 @@ fn main() {
         wofi_height: 400,
     };
 
-    update_wallpaper(config)
+    if let Err(error) = update_wallpaper(config) {
+        eprintln!("{}", error);
+    }
 }
 
 #[derive(Clone, Debug)]

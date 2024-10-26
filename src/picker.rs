@@ -1,19 +1,24 @@
 use std::{
+    fmt::Display,
     path::Path,
     process::{Command, Stdio},
 };
 
 use crate::Config;
 
-/// Render wallpaper picker using wofi.
-pub(crate) fn update_wallpaper(config: Config) {
+/// Render wallpaper picker using wofi. Returns an error message in case of an error.
+pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
     let prompt = "Walls";
-    let wallpapers = get_wallpapers(config.wallpaper_dir.as_path()).unwrap();
+    let wallpapers = get_wallpapers(config.wallpaper_dir.as_path()).ok_or(WallsError::new(
+        WallsErrorType::InvalidPath,
+        format!("{:?}", config.wallpaper_dir),
+    ))?;
+
     let input = Command::new("echo")
         .arg(wallpapers)
         .stdout(Stdio::piped())
         .spawn()
-        .unwrap();
+        .map_err(|error| WallsError::new(WallsErrorType::CouldNotPipeToWofi, error.to_string()))?;
 
     let output = Command::new("wofi")
         .arg("-p")
@@ -26,17 +31,22 @@ pub(crate) fn update_wallpaper(config: Config) {
         .arg("height")
         .arg(format!("{}", config.wofi_height))
         .arg("-I")
-        .stdin(Stdio::from(input.stdout.unwrap()))
+        .stdin(Stdio::from(input.stdout.ok_or(WallsError::new(
+            WallsErrorType::NoWallpaperSelected,
+            "".to_string(),
+        ))?))
         .output()
-        .unwrap();
+        .map_err(|error| WallsError::new(WallsErrorType::CommandFailure, error.to_string()))?;
 
-    //swww img .config/wallpapers/mario.gif -t grow --transition-pos 0.7,0.9
     if output.status.success() {
         let data = String::from_utf8_lossy(output.stdout.as_slice());
         let data = data.split(":").collect::<Vec<&str>>();
-        let path = data.get(1).unwrap();
+        let path = data.get(1).ok_or(WallsError::new(
+            WallsErrorType::InvalidFormat,
+            "".to_string(),
+        ))?;
 
-        let result = Command::new("swww")
+        Command::new("swww")
             .arg("img")
             .arg(path)
             .arg("-t")
@@ -44,11 +54,13 @@ pub(crate) fn update_wallpaper(config: Config) {
             .arg("--transition-pos")
             .arg("0.7,0.9")
             .output()
-            .unwrap();
-
-        println!("result: {:?}", result)
+            .map_err(|error| WallsError::new(WallsErrorType::CommandFailure, error.to_string()))
+            .map(|_| ())
     } else {
-        todo!("error handling");
+        Err(WallsError::new(
+            WallsErrorType::CommandFailure,
+            format!("error: wofi command failed: {}", output.status),
+        ))
     }
 }
 
@@ -68,4 +80,41 @@ fn get_wallpapers(path: &Path) -> Option<String> {
     buffer.truncate(buffer.len().saturating_sub(1));
 
     Some(buffer)
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct WallsError {
+    r#type: WallsErrorType,
+    message: String,
+}
+
+impl WallsError {
+    pub(crate) fn new(r#type: WallsErrorType, message: String) -> WallsError {
+        Self { r#type, message }
+    }
+}
+
+impl Display for WallsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let error = match self.r#type {
+            WallsErrorType::InvalidPath => "error: invalid wallpaper path.",
+            WallsErrorType::CouldNotPipeToWofi => {
+                "error: could not pipe wallpapers to wofi picker."
+            }
+            WallsErrorType::NoWallpaperSelected => "error: no valid wallpaper was selected.",
+            WallsErrorType::CommandFailure => "error: command failed.",
+            WallsErrorType::InvalidFormat => "error: invalid wallpaper name format.",
+        };
+
+        write!(f, "{} {}", error, self.message)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum WallsErrorType {
+    InvalidPath,
+    CouldNotPipeToWofi,
+    NoWallpaperSelected,
+    CommandFailure,
+    InvalidFormat,
 }
