@@ -27,4 +27,14 @@ pub(crate) struct Cli {
         help = "Height of wofi display box."
     )]
     pub(crate) height: u16,
+    #[clap(
+        short = 's',
+        long,
+        value_name = "STYLE",
+        help = "Wofi stylesheet to use."
+    )]
+    pub(crate) stylesheet: Option<String>,
+
+    #[clap(short = 'c', long, value_name = "CONFIG", help = "Wofi config to use.")]
+    pub(crate) config: Option<String>,
 }

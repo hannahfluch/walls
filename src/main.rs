@@ -20,6 +20,8 @@ pub(crate) struct Config {
     pub(crate) wallpaper_dir: PathBuf,
     pub(crate) wofi_width: u16,
     pub(crate) wofi_height: u16,
+    pub(crate) wofi_stylesheet: Option<String>,
+    pub(crate) wofi_config: Option<String>,
 }
 
 impl From<Cli> for Config {
@@ -28,6 +30,8 @@ impl From<Cli> for Config {
             wallpaper_dir: PathBuf::from(value.path),
             wofi_width: value.width,
             wofi_height: value.height,
+            wofi_stylesheet: value.stylesheet,
+            wofi_config: value.config,
         }
     }
 }

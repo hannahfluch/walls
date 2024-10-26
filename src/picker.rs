@@ -20,7 +20,9 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
         .spawn()
         .map_err(|error| WallsError::new(WallsErrorType::CouldNotPipeToWofi, error.to_string()))?;
 
-    let output = Command::new("wofi")
+    let mut wofi = &mut Command::new("wofi");
+
+    wofi = wofi
         .arg("-p")
         .arg(prompt)
         .arg("--cache-file")
@@ -30,7 +32,19 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
         .arg(format!("{}", config.wofi_width))
         .arg("height")
         .arg(format!("{}", config.wofi_height))
-        .arg("-I")
+        .arg("-I");
+
+    // add optional wofi config parameter
+    if let Some(wofi_config) = config.wofi_config {
+        wofi = wofi.arg("-C").arg(wofi_config);
+    }
+
+    // add option wofi stylesheet parameter
+    if let Some(wofi_stylesheet) = config.wofi_stylesheet {
+        wofi = wofi.arg("-s").arg(wofi_stylesheet);
+    }
+
+    let wofi = wofi
         .stdin(Stdio::from(input.stdout.ok_or(WallsError::new(
             WallsErrorType::NoWallpaperSelected,
             "".to_string(),
@@ -38,8 +52,8 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
         .output()
         .map_err(|error| WallsError::new(WallsErrorType::CommandFailure, error.to_string()))?;
 
-    if output.status.success() {
-        let data = String::from_utf8_lossy(output.stdout.as_slice());
+    if wofi.status.success() {
+        let data = String::from_utf8_lossy(wofi.stdout.as_slice());
         let data = data.split(":").collect::<Vec<&str>>();
         let path = data.get(1).ok_or(WallsError::new(
             WallsErrorType::InvalidFormat,
@@ -59,7 +73,7 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
     } else {
         Err(WallsError::new(
             WallsErrorType::CommandFailure,
-            format!("error: wofi command failed: {}", output.status),
+            format!("error: wofi command failed: {}", wofi.status),
         ))
     }
 }
