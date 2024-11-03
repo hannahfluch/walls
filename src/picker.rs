@@ -1,6 +1,7 @@
 use std::{
+    env,
     fmt::Display,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -60,6 +61,13 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
             "".to_string(),
         ))?;
 
+        // start swww daemon if not running
+        if !swww_is_running()? {
+            Command::new("swww-daemon").spawn().map_err(|error| {
+                WallsError::new(WallsErrorType::CommandFailure, error.to_string())
+            })?;
+        }
+
         Command::new("swww")
             .arg("img")
             .arg(path)
@@ -76,6 +84,22 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
             format!("error: wofi command failed: {}", wofi.status),
         ))
     }
+}
+
+/// Checks whether swww-daemon is running
+fn swww_is_running() -> Result<bool, WallsError> {
+    let wayland_display = env::var("WAYLAND_DISPLAY")
+        .map_err(|error| WallsError::new(WallsErrorType::WaylandNotRunning, error.to_string()))?;
+
+    let path = match env::var("XDG_RUNTIME_DIR") {
+        Ok(xdg_runtime_dir) => PathBuf::from(format!(
+            "{}/swww-{}.socket",
+            xdg_runtime_dir, wayland_display
+        )),
+        Err(_) => PathBuf::from(format!("/tmp/swww/swww-{}.socket", wayland_display)),
+    };
+
+    Ok(path.exists())
 }
 
 /// Returns a string containing the properly formated wallpaper names and images.
@@ -118,6 +142,9 @@ impl Display for WallsError {
             WallsErrorType::NoWallpaperSelected => "error: no valid wallpaper was selected.",
             WallsErrorType::CommandFailure => "error: command failed.",
             WallsErrorType::InvalidFormat => "error: invalid wallpaper name format.",
+            WallsErrorType::WaylandNotRunning => {
+                "error: wayland compositor does not seem to be running."
+            }
         };
 
         write!(f, "{} {}", error, self.message)
@@ -131,4 +158,5 @@ pub(crate) enum WallsErrorType {
     NoWallpaperSelected,
     CommandFailure,
     InvalidFormat,
+    WaylandNotRunning,
 }
