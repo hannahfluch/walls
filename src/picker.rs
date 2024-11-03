@@ -12,14 +12,16 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
     let prompt = "Walls";
     let wallpapers = get_wallpapers(config.wallpaper_dir.as_path()).ok_or(WallsError::new(
         WallsErrorType::InvalidPath,
-        format!("{:?}", config.wallpaper_dir),
+        format!("{:?}", config.wallpaper_dir).into(),
     ))?;
 
     let input = Command::new("echo")
         .arg(wallpapers)
         .stdout(Stdio::piped())
         .spawn()
-        .map_err(|error| WallsError::new(WallsErrorType::CouldNotPipeToWofi, error.to_string()))?;
+        .map_err(|error| {
+            WallsError::new(WallsErrorType::CouldNotPipeToWofi, error.to_string().into())
+        })?;
 
     let mut wofi = &mut Command::new("wofi");
 
@@ -48,23 +50,24 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
     let wofi = wofi
         .stdin(Stdio::from(input.stdout.ok_or(WallsError::new(
             WallsErrorType::NoWallpaperSelected,
-            "".to_string(),
+            None,
         ))?))
         .output()
-        .map_err(|error| WallsError::new(WallsErrorType::CommandFailure, error.to_string()))?;
+        .map_err(|error| {
+            WallsError::new(WallsErrorType::CommandFailure, error.to_string().into())
+        })?;
 
     if wofi.status.success() {
         let data = String::from_utf8_lossy(wofi.stdout.as_slice());
         let data = data.split(":").collect::<Vec<&str>>();
-        let path = data.get(1).ok_or(WallsError::new(
-            WallsErrorType::InvalidFormat,
-            "".to_string(),
-        ))?;
+        let path = data
+            .get(1)
+            .ok_or(WallsError::new(WallsErrorType::InvalidFormat, None))?;
 
         // start swww daemon if not running
         if !swww_is_running()? {
             Command::new("swww-daemon").spawn().map_err(|error| {
-                WallsError::new(WallsErrorType::CommandFailure, error.to_string())
+                WallsError::new(WallsErrorType::CommandFailure, error.to_string().into())
             })?;
         }
 
@@ -76,20 +79,23 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
             .arg("--transition-pos")
             .arg("0.7,0.9")
             .output()
-            .map_err(|error| WallsError::new(WallsErrorType::CommandFailure, error.to_string()))
+            .map_err(|error| {
+                WallsError::new(WallsErrorType::CommandFailure, error.to_string().into())
+            })
             .map(|_| ())
     } else {
         Err(WallsError::new(
             WallsErrorType::CommandFailure,
-            format!("error: wofi command failed: {}", wofi.status),
+            format!("error: wofi command failed: {}", wofi.status).into(),
         ))
     }
 }
 
 /// Checks whether swww-daemon is running
 fn swww_is_running() -> Result<bool, WallsError> {
-    let wayland_display = env::var("WAYLAND_DISPLAY")
-        .map_err(|error| WallsError::new(WallsErrorType::WaylandNotRunning, error.to_string()))?;
+    let wayland_display = env::var("WAYLAND_DISPLAY").map_err(|error| {
+        WallsError::new(WallsErrorType::WaylandNotRunning, error.to_string().into())
+    })?;
 
     let path = match env::var("XDG_RUNTIME_DIR") {
         Ok(xdg_runtime_dir) => PathBuf::from(format!(
@@ -123,11 +129,11 @@ fn get_wallpapers(path: &Path) -> Option<String> {
 #[derive(Clone, Debug)]
 pub(crate) struct WallsError {
     r#type: WallsErrorType,
-    message: String,
+    message: Option<String>,
 }
 
 impl WallsError {
-    pub(crate) fn new(r#type: WallsErrorType, message: String) -> WallsError {
+    pub(crate) fn new(r#type: WallsErrorType, message: Option<String>) -> WallsError {
         Self { r#type, message }
     }
 }
@@ -147,7 +153,12 @@ impl Display for WallsError {
             }
         };
 
-        write!(f, "{} {}", error, self.message)
+        write!(
+            f,
+            "{} {}",
+            error,
+            self.message.as_deref().unwrap_or_default()
+        )
     }
 }
 
