@@ -60,5 +60,7 @@ Use a custom wofi stylesheet to give your wallpaper chooser a stylish makeover.
 ```
 Specify a wofi configuration file to customize your experience further.
 
+> todo: configure swww, wofi generically with argument parsing
+
 ## 🧭 License
 This project is licensed under the MIT License.
