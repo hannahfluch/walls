@@ -39,7 +39,7 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
 
     // add optional wofi config parameter
     if let Some(wofi_config) = config.wofi_config {
-        wofi = wofi.arg("-C").arg(wofi_config);
+        wofi = wofi.arg("-c").arg(wofi_config);
     }
 
     // add option wofi stylesheet parameter
