@@ -39,28 +39,11 @@ Required. The enchanted path to the directory containing your wallpapers.
 ### ⚙️ Options
 
 ```bash
--w <WIDTH>, --width <WIDTH>:
+-W <WOFI-ARGS>, --wofi <WOFI-ARGS>:
 ```
-Default: 500
-Set the width of the wofi display box.
+Specify the wofi arguments.
 
-```bash
--H <HEIGHT>, --height <HEIGHT>:
-```
-Default: 400
-Set the height of the wofi display box. Make it tall enough to show off your favorites!
-
-```bash
--s <STYLE>, --stylesheet <STYLE>:
-```
-Use a custom wofi stylesheet to give your wallpaper chooser a stylish makeover.
-
-```bash
--c <CONFIG>, --config <CONFIG>:
-```
-Specify a wofi configuration file to customize your experience further.
-
-> todo: configure swww, wofi generically with argument parsing
+> todo: configure swww generically with argument parsing
 
 ## 🧭 License
 This project is licensed under the MIT License.

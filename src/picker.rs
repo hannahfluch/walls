@@ -31,20 +31,11 @@ pub(crate) fn update_wallpaper(config: Config) -> Result<(), WallsError> {
         .arg("--cache-file")
         .arg("/dev/null")
         .arg("--dmenu")
-        .arg("--width")
-        .arg(format!("{}", config.wofi_width))
-        .arg("height")
-        .arg(format!("{}", config.wofi_height))
         .arg("-I");
 
-    // add optional wofi config parameter
-    if let Some(wofi_config) = config.wofi_config {
-        wofi = wofi.arg("-c").arg(wofi_config);
-    }
-
-    // add option wofi stylesheet parameter
-    if let Some(wofi_stylesheet) = config.wofi_stylesheet {
-        wofi = wofi.arg("-s").arg(wofi_stylesheet);
+    // add optional wofi arguments
+    if let Some(wofi_args) = config.wofi_args {
+        wofi = wofi.args(wofi_args.split(" "));
     }
 
     let wofi = wofi
