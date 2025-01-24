@@ -16,7 +16,7 @@ Ready to embark on your wallpaper adventure? Here’s how to get started:
 
 1. **Clone the Repository**:
 ```bash
-git clone https://github.com/Hqnnqh/walls.git
+git clone https://github.com/hannahfluch/walls.git
 cd walls
 ```
 
